@@ -1,43 +1,24 @@
 <script>
-    import {
-        signInWithEmailAndPassword,
-        getAuth,
-        onAuthStateChanged,
-    } from "firebase/auth";
+    import { signInWithEmailAndPassword } from "firebase/auth";
+    import { SignedOut } from "sveltefire";
 
-    export let app;
-
-    const auth = getAuth(app);
-
-    async function attemptSignIn() {
+    async function attemptSignIn(auth) {
         error = "";
-        let credential;
         try {
-            credential = await signInWithEmailAndPassword(
-                auth,
-                username,
-                password
-            );
+            await signInWithEmailAndPassword(auth, username, password);
         } catch (e) {
             error = e;
-
-            user = credential.user;
         }
     }
 
     let username, password;
     let error = "";
-
-    let user;
-    onAuthStateChanged(auth, (u) => {
-        user = u;
-    });
 </script>
 
-{#if !user}
+<SignedOut let:auth>
     <input type="text" bind:value={username} />
     <input type="password" bind:value={password} />
-    <button on:click={attemptSignIn}>Signin</button>
+    <button on:click={() => attemptSignIn(auth)}>Signin</button>
 
     <div style="color: red;">{error}</div>
-{/if}
+</SignedOut>

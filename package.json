@@ -4,6 +4,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
+		"deploy": "firebase deploy",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
@@ -21,6 +22,7 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"firebase": "^9.23.0"
+		"firebase": "^9.23.0",
+		"sveltefire": "^0.4.2"
 	}
 }

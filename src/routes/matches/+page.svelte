@@ -3,63 +3,32 @@
         addDoc,
         collection,
         doc,
-        getDoc,
-        getFirestore,
-        onSnapshot,
         orderBy,
         query,
-        setDoc,
         updateDoc,
     } from "firebase/firestore";
-    import { getAuth } from "firebase/auth";
-    import { onDestroy } from "svelte";
+    import {
+        Collection,
+        SignedIn,
+        SignedOut,
+        collectionStore,
+    } from "sveltefire";
 
     import ScoreInput from "./ScoreInput.svelte";
-    import NeedsSignIn from "../NeedsSignIn.svelte";
-
-    export let app;
-
-    let firestore = getFirestore(app);
+    import { firestore } from "../firebase";
+    import { generateNewElos } from "./elo";
 
     let matchesCollection = collection(firestore, "matches");
-
-    let matches = [];
-
-    const unsubscribeMatches = onSnapshot(matchesCollection, (snapshot) => {
-        matches = snapshot.docs.map((doc) => ({
-            ref: doc.ref,
-            id: doc.id,
-            ...doc.data(),
-        }));
-    });
-
-    onDestroy(() => unsubscribeMatches());
-
-    let playersCollection = collection(firestore, "players");
-
-    let players = [];
-
-    const unsubscribePlayers = onSnapshot(
-        query(playersCollection, orderBy("lastUpdate")),
-        (snapshot) => {
-            players = snapshot.docs.map((doc) => ({
-                ref: doc.ref,
-                id: doc.id,
-                ...doc.data(),
-            }));
-            currentMatches = currentMatches;
-        }
-    );
-
-    onDestroy(() => unsubscribePlayers());
 
     let currentMatches = [];
     for (let index = 0; index < 8; index++) {
         currentMatches.push([]);
     }
 
+    const players = collectionStore(firestore, "players");
+
     function getPlayerFromId(id) {
-        let p = players.filter((v) => v.id === id)[0];
+        let p = $players.filter((v) => v.id === id)[0];
         return p;
     }
 
@@ -84,45 +53,24 @@
 
     let selectedPlayer = "";
 
-    function performMatchEloUpdate(scoreA, scoreB, match) {
-        let result = scoreA / (scoreA + scoreB);
+    function performMatchEloUpdate(scoreA, scoreB, playerIds) {
 
-        let playerData = match.map((m) => getPlayerFromId(m));
+        let elos = playerIds.map((m) => getPlayerFromId(m).currentElo);
 
-        let elos = playerData.map((p) => parseFloat(p.currentElo));
+        let [valid, newElos, pointGain] = generateNewElos(elos, scoreA, scoreB);
 
-        let elo1, elo2;
-        if (match.length == 2) {
-            elo1 = elos[0];
-            elo2 = elos[1];
-        } else {
-            elo1 = (elos[0] + elos[1]) / 2;
-            elo2 = (elos[2] + elos[3]) / 2;
-        }
+        if (!valid) return;
 
-        let expectation = 1 / (1 + Math.pow(10, (elo2 - elo1) / 400));
-
-        let diff = result - expectation;
-
-        let pointGain = 15 * diff;
-
-        if (!isFinite(pointGain)) return;
-
-        if (match.length == 2) {
-            updatePlayerElo(match[0], elos[0] + pointGain);
-            updatePlayerElo(match[1], elos[1] - pointGain);
-        } else {
-            updatePlayerElo(match[0], elos[0] + pointGain);
-            updatePlayerElo(match[1], elos[1] + pointGain);
-            updatePlayerElo(match[2], elos[2] - pointGain);
-            updatePlayerElo(match[3], elos[3] - pointGain);
-        }
+        playerIds.forEach((pId, i) => {
+            console.log(pId, i)
+            updatePlayerElo(pId, newElos[i])
+        })
 
         let playersObj = {};
-        if (match.length == 2) {
-            playersObj["player1A"] = match[0];
+        if (playerIds.length == 2) {
+            playersObj["player1A"] = playerIds[0];
             playersObj["player1B"] = "";
-            playersObj["player2A"] = match[1];
+            playersObj["player2A"] = playerIds[1];
             playersObj["player2B"] = "";
 
             playersObj["player1AOldElo"] = elos[0];
@@ -130,10 +78,10 @@
             playersObj["player2AOldElo"] = elos[1];
             playersObj["player2BOldElo"] = 0;
         } else {
-            playersObj["player1A"] = match[0];
-            playersObj["player1B"] = match[1];
-            playersObj["player2A"] = match[2];
-            playersObj["player2B"] = match[3];
+            playersObj["player1A"] = playerIds[0];
+            playersObj["player1B"] = playerIds[1];
+            playersObj["player2A"] = playerIds[2];
+            playersObj["player2B"] = playerIds[3];
 
             playersObj["player1AOldElo"] = elos[0];
             playersObj["player1BOldElo"] = elos[1];
@@ -151,17 +99,23 @@
     }
 
     function updatePlayerElo(id, newElo) {
+        console.log(newElo);
         let playerRef = doc(firestore, `players/${id}`);
         updateDoc(playerRef, {
-            ...getPlayerFromId(id),
             currentElo: newElo,
             lastUpdate: Date.now(),
         });
     }
 </script>
 
-<NeedsSignIn {app}>
+<SignedOut>
+    <h1>Unauthorised</h1>
+    <a href="/signin">Sign In</a>
+</SignedOut>
+
+<SignedIn>
     <h1>Current Matches</h1>
+    <p>Warning: will clear if page refreshes</p>
     <div style="display: flex; flex-wrap: wrap;">
         {#each currentMatches as match, mi}
             <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -196,19 +150,25 @@
 
     <h1>Available Players</h1>
     <table>
-        {#each players as { ref, id, ...player } (id)}
-            {#if !currentMatches.some((c) => c.includes(id))}
-                <tr
-                    on:click={() =>
-                        (selectedPlayer = selectedPlayer == id ? "" : id)}
-                    style={selectedPlayer == id
-                        ? "font-weight: bold; cursor:pointer;"
-                        : "cursor:pointer;"}
-                >
-                    <td>{player.name}</td>
-                    <td>{parseFloat(player.currentElo).toFixed(1)}</td>
-                </tr>
-            {/if}
-        {/each}
+        <Collection
+            ref={query(collection(firestore, "players"), orderBy("lastUpdate"))}
+            let:data={players}
+        >
+            {#each players as player (player.id)}
+                {#if !currentMatches.some((c) => c.includes(player.id))}
+                    <tr
+                        on:click={() =>
+                            (selectedPlayer =
+                                selectedPlayer == player.id ? "" : player.id)}
+                        style={selectedPlayer == player.id
+                            ? "font-weight: bold; cursor:pointer;"
+                            : "cursor:pointer;"}
+                    >
+                        <td>{player.name}</td>
+                        <td>{parseFloat(player.currentElo).toFixed(1)}</td>
+                    </tr>
+                {/if}
+            {/each}
+        </Collection>
     </table>
-</NeedsSignIn>
+</SignedIn>

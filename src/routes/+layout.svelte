@@ -1,28 +1,22 @@
 <script lang="ts">
-	import { initializeApp } from "firebase/app";
-	import { getAuth, signOut, onAuthStateChanged } from "firebase/auth";
+	import { FirebaseApp, SignedIn } from "sveltefire";
+	import {auth, firestore} from "./firebase";
 
-	// Initialize Firebase
-	const app = initializeApp({
-		apiKey: "AIzaSyD6xmcRawzfBM4iBb3Zz9FwP3BYEc6jxdc",
-		authDomain: "badmintonelo.firebaseapp.com",
-		projectId: "badmintonelo",
-		storageBucket: "badmintonelo.appspot.com",
-		messagingSenderId: "330195930910",
-		appId: "1:330195930910:web:e3e6da3b0a55aeb4fb830f",
-	});
-
-    const auth = getAuth(app);
-
-    let user;
-    onAuthStateChanged(auth, (u) => {
-        user = u;
-    });
 </script>
 
-{#if user}
-    <div>Signed In as {user.displayName ?? user.email}</div>
-    <div on:click={() => signOut(auth)}>[Log Out]</div>
-{/if}
+<FirebaseApp {auth} {firestore}>
+	<SignedIn let:user let:signOut>
+		<div>Signed In as {user.displayName ?? user.email}
+			<a on:click={signOut}>[Log Out]</a>
+		</div>
+		<div>
+			<a href="/players">[Players]</a>
+			<a href="/matches">[Match Admin]</a>
+			<a href="/">[Rankings]</a>
+			<br>
+			<br>
+		</div>
+	</SignedIn>
 
-<slot {app} {auth}/>
+	<slot />
+</FirebaseApp>
