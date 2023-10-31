@@ -1,7 +1,8 @@
 <script lang="ts">
-    import { addDoc, updateDoc } from "firebase/firestore";
+    import { addDoc, collection, orderBy, query, updateDoc } from "firebase/firestore";
     import { Collection, SignedIn, SignedOut } from "sveltefire";
     import { STARTING_ELO } from "../matches/elo";
+    import { firestore } from "../firebase";
 
     let newPlayerNames = "";
     function addNewPlayers(playersCollection) {
@@ -15,6 +16,8 @@
             });
         }
     }
+
+
 </script>
 
 <SignedOut>
