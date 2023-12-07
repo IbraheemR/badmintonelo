@@ -21,8 +21,13 @@ export function getEloMeansFromMatchArray(eloArray) {
         elo1 = eloArray[0];
         elo2 = eloArray[1];
     } else {
-        elo1 = (eloArray[0] + eloArray[1]) / 2;
-        elo2 = (eloArray[2] + eloArray[3]) / 2;
+        let elo1min = Math.min(eloArray[0] + eloArray[1]);
+        let elo1max = Math.max(eloArray[0] + eloArray[1]);
+        let elo2min = Math.min(eloArray[2] + eloArray[3]);
+        let elo2max = Math.max(eloArray[2] + eloArray[3]);
+
+        elo1 = (elo1min * 0.75 + elo1max * 0.25);
+        elo2 = (elo2min * 0.75 + elo2max * 0.25);
     }
 
     return [elo1, elo2]

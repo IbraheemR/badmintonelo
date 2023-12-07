@@ -6,6 +6,7 @@
         orderBy,
         query,
         updateDoc,
+        where
     } from "firebase/firestore";
     import {
         Collection,
@@ -151,7 +152,7 @@
     <h1>Available Players</h1>
     <table>
         <Collection
-            ref={query(collection(firestore, "players"), orderBy("lastUpdate"))}
+            ref={query(collection(firestore, "players"), orderBy("lastUpdate"), where("present", "==", true))}
             let:data={players}
         >
             {#each players as player (player.id)}

@@ -1,5 +1,11 @@
 <script lang="ts">
-    import { addDoc, collection, orderBy, query, updateDoc } from "firebase/firestore";
+    import {
+        addDoc,
+        collection,
+        orderBy,
+        query,
+        updateDoc,
+    } from "firebase/firestore";
     import { Collection, SignedIn, SignedOut } from "sveltefire";
     import { STARTING_ELO } from "../matches/elo";
     import { firestore } from "../firebase";
@@ -15,9 +21,9 @@
                 lastUpdate: 0,
             });
         }
+
+        newPlayerNames = "";
     }
-
-
 </script>
 
 <SignedOut>
@@ -42,7 +48,26 @@
             >
         </p>
 
+        <br />
+
+        <br />
+
         <table>
+            <tr>
+                <td />
+                <td />
+                <td />
+                <td />
+                <td>
+                    <button
+                        on:click={() => {
+                            players.forEach(({ ref }) => {
+                                updateDoc(ref, { present: false });
+                            });
+                        }}>Clear All Present</button
+                    >
+                </td>
+            </tr>
             {#each players as { ref, id, ...player } (id)}
                 <tr>
                     <td>{id}</td>
@@ -56,6 +81,14 @@
                             })}
                         >{#if player.hideInLeague}[Hidden]{:else}[Hide in
                             Rankings]{/if}</td
+                    >
+                    <td
+                        style="cursor: pointer;"
+                        on:click={() =>
+                            updateDoc(ref, {
+                                present: !player.present,
+                            })}
+                        >{#if player.present}[Present]{:else}[Mark Present]{/if}</td
                     >
                 </tr>
             {/each}

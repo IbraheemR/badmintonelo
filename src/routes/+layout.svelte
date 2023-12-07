@@ -16,6 +16,7 @@
 			<a href="/players">[Players]</a>
 			<a href="/matches">[Match Admin]</a>
 			<a href="/">[Rankings]</a>
+			<a href="/currentSession">[Current Session]</a>
 			<br />
 			<br />
 		</div>
